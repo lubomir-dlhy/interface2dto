@@ -47,7 +47,7 @@ export interface AdvertisementBaseDto {
    * @type {Array<string>}
    * @memberof AdvertisementBaseDto
    */
-  projects: Array<string>;
+  projects: string[];
   /**
    *
    * @type {Array<object>}

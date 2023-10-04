@@ -1,7 +1,7 @@
 import * as ts from "typescript";
 import * as fs from "fs";
 import { ApiPropertyOptions } from "@nestjs/swagger";
-import { isObject, isArray } from "lodash";
+import { isObject, isArray, isEmpty } from "lodash";
 import { Command } from "commander";
 
 const imports = new Map<string, ts.ImportDeclaration>();
@@ -152,12 +152,19 @@ const processType = (
         apiPropertyOpts.nullable = true;
       }
       break;
+    case ts.SyntaxKind.ArrayType:
+      // Array using []
+      const arrayTypeNode = node as ts.ArrayTypeNode;
+      decorators.push(addClassValidatorDecorator("IsArray"));
+      processType(arrayTypeNode.elementType, apiPropertyOpts, decorators, true);
+      apiPropertyOpts.isArray = true;
+      break;
     case ts.SyntaxKind.TypeReference:
       const typeRefNode = node as ts.TypeReferenceNode;
       const typeName = typeRefNode.typeName["escapedText"];
       const typeArgs = typeRefNode.typeArguments;
       if (typeName === "Array" && typeArgs.length === 1) {
-        // Array
+        // Array using Array<>
         decorators.push(addClassValidatorDecorator("IsArray"));
         processType(typeArgs[0], apiPropertyOpts, decorators, true);
         apiPropertyOpts.isArray = true;
@@ -228,7 +235,7 @@ const transform: ts.TransformerFactory<ts.SourceFile> = (context) => {
       const decorator = createDecorator(
         apiDecorator,
         "@nestjs/swagger",
-        apiPropertyOpts
+        isEmpty(apiPropertyOpts) ? undefined : [apiPropertyOpts]
       );
 
       const newProperty = ts.factory.createPropertyDeclaration(
